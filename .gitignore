@@ -1,0 +1,6 @@
+.env
+**/.env
+
+server/letsencrypt
+node_modules/
+server/aether

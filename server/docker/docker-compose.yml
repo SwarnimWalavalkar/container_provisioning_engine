@@ -1,0 +1,79 @@
+version: "3"
+
+name: aether
+
+services:
+  reverse-proxy:
+    image: traefik:v2.10
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      # - "--certificatesresolvers.tlsresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.tlsresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.tlsresolver.acme.email=swarnim.walavalkar@gmail.com"
+      - "--certificatesresolvers.tlsresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    networks:
+      - traefik_default
+    volumes:
+      - "../letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  postgres:
+    image: postgres:alpine
+    command:
+      [
+        "postgres",
+        "-c",
+        "log_statement=all",
+        "-c",
+        "log_destination=stderr",
+        "-c",
+        "wal_level=logical",
+        "-c",
+        "fsync=off",
+      ]
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 5432:5432
+    networks:
+      - traefik_default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db:/var/lib/postgresql/data
+  migrations:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - traefik_default
+    image: migrate/migrate
+    volumes:
+      - ../migrations:/migrations
+    command: "-path=/migrations/ -database postgresql://$DB_USER:$DB_PASSWORD@postgres:$DB_PORT/$DB_NAME?sslmode=disable up"
+    restart: on-failure
+
+networks:
+  traefik_default:
+    name: traefik_default
+    external: true
+
+volumes:
+  db:
