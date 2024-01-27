@@ -6,9 +6,8 @@ stop:
 
 restart: stop start
 
-aether: $(wildcard *.go **/*.go)
+aether: $(shell find . -name '*.go' -print)
 	go build -o aether main.go
-
 
 run: aether
 	./aether 

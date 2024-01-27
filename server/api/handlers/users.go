@@ -42,6 +42,12 @@ func CreateUser(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
+		_, err := db.GetUserByAPIKey(c.Request.Context(), userReq.ApiKey)
+		if err == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "API Key already in use"})
+			return
+		}
+
 		user, err := db.CreateUser(c.Request.Context(), userReq)
 		if err != nil {
 			c.Error(err)
@@ -84,7 +90,8 @@ func GetAuthToken(db *database.Database) gin.HandlerFunc {
 
 		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 		if err != nil {
-			fmt.Println("failed to create token")
+			c.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
