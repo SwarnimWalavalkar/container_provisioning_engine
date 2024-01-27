@@ -19,15 +19,11 @@ func (d *Database) GetDeployment(ctx context.Context, uuidOrSubdomain string) (t
 
 // @TODO: Paginate this
 func (d *Database) GetAllDeploymentsForUser(ctx context.Context, userUUID string) ([]types.Deployment, error) {
-	var deployments []types.Deployment
+	deployments := []types.Deployment{}
 	query := `SELECT * FROM deployments WHERE user_id = (SELECT id FROM users WHERE uuid = $1)`
 
 	if err := d.Client.SelectContext(ctx, &deployments, query, userUUID); err != nil {
 		return []types.Deployment{}, err
-	}
-
-	if deployments == nil {
-		return []types.Deployment{}, nil
 	}
 
 	return deployments, nil
