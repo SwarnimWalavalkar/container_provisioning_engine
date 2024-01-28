@@ -1,13 +1,13 @@
-start:
+dx-start:
 	./scripts/start.sh
 
-stop:
+dx-stop:
 	./scripts/stop.sh
 
-restart: stop start
+dx-restart: dx-stop dx-start
 
 aether: $(shell find . -name '*.go' -print)
 	go build -o aether main.go
 
-run: aether
-	./aether 
+start: aether
+	./aether

@@ -4,3 +4,4 @@
 server/letsencrypt
 node_modules/
 server/aether
+tmp/
