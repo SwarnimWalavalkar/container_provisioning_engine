@@ -2,13 +2,18 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strconv"
 
 	"github.com/SwarnimWalavalkar/aether/database"
+	"github.com/SwarnimWalavalkar/aether/services"
 	"github.com/SwarnimWalavalkar/aether/types"
 	"github.com/SwarnimWalavalkar/aether/utils"
+	"github.com/docker/docker/api/types/registry"
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,7 +69,7 @@ func GetAllDeploymentsForUser(db *database.Database) gin.HandlerFunc {
 	}
 }
 
-func CreateDeployment(db *database.Database) gin.HandlerFunc {
+func CreateDeployment(db *database.Database, docker *services.DockerService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var deploymentReq types.CreateDeploymentRequest
 		if err := c.ShouldBindJSON(&deploymentReq); err != nil {
@@ -73,9 +78,8 @@ func CreateDeployment(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		userUUID, doesUserUUIDExists := c.Get("userUUID")
-
-		if !doesUserUUIDExists {
+		userUUID, ok := c.Get("userUUID")
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
@@ -85,14 +89,57 @@ func CreateDeployment(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		internalPort, err := utils.GetFreePort()
+		if len(deploymentReq.EnvConfig) == 0 {
+			deploymentReq.EnvConfig = make(map[string]string)
+		}
+
+		var containerPort int
+		providedPortStr, exists := deploymentReq.EnvConfig["PORT"]
+		if exists {
+			providedPort, err := strconv.Atoi(providedPortStr)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "The value of port must be a valid port number"})
+				return
+			}
+			containerPort = providedPort
+		} else {
+			availablePort, err := utils.GetFreePort()
+			if err != nil {
+				c.Error(err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			containerPort = availablePort
+
+			deploymentReq.EnvConfig["PORT"] = strconv.Itoa(availablePort)
+		}
+
+		var envArray []string
+		for key, value := range deploymentReq.EnvConfig {
+			envArray = append(envArray, fmt.Sprintf("%s=%s", key, value))
+		}
+
+		authString := ""
+		if deploymentReq.DockerAuth != nil {
+			authConfig := registry.AuthConfig{Username: deploymentReq.DockerAuth.Username, Password: deploymentReq.DockerAuth.Password}
+
+			encodedJSON, err := json.Marshal(authConfig)
+			if err != nil {
+				panic(err)
+			}
+
+			authString = base64.URLEncoding.EncodeToString(encodedJSON)
+		}
+
+		containerId, err := docker.ProvisionContainer(c, deploymentReq.ImageTag, deploymentReq.Subdomain, envArray, containerPort, authString)
+
 		if err != nil {
 			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		deployment, err := db.CreateDeployment(c.Request.Context(), types.DeploymentAttributes{UserUUID: userUUID.(string), Subdomain: deploymentReq.Subdomain, ImageTag: deploymentReq.ImageTag, ContainerId: fmt.Sprintf("%x", rand.Uint64()), InternalPort: internalPort})
+		deployment, err := db.CreateDeployment(c.Request.Context(), types.DeploymentAttributes{UserUUID: userUUID.(string), Subdomain: deploymentReq.Subdomain, ImageTag: deploymentReq.ImageTag, ContainerId: containerId, InternalPort: containerPort})
 		if err != nil {
 			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -149,7 +196,7 @@ func UpdateDeployment(db *database.Database) gin.HandlerFunc {
 	}
 }
 
-func DeleteDeployment(db *database.Database) gin.HandlerFunc {
+func DeleteDeployment(db *database.Database, docker *services.DockerService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uuid := c.Param("uuid")
 

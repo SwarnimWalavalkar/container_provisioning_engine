@@ -12,7 +12,7 @@ import (
 
 	"github.com/SwarnimWalavalkar/aether/api"
 	"github.com/SwarnimWalavalkar/aether/database"
-
+	"github.com/SwarnimWalavalkar/aether/services"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 )
@@ -27,12 +27,21 @@ func main() {
 	}
 
 	if err := db.Ping(context.Background()); err != nil {
-		log.Fatal("Error pining database", err)
+		log.Fatal("Error pinging database", err)
 	}
 
 	fmt.Println("successfully connected to database")
 
-	server := api.NewServer(fmt.Sprintf(":%s", os.Getenv("PORT")), db)
+	docker, err := services.NewDockerService()
+	if err != nil {
+		fmt.Println("Error connecting to Docker", err)
+	}
+
+	if err := docker.Ping(context.Background()); err != nil {
+		log.Fatal("Error pinging Docker", err)
+	}
+
+	server := api.NewServer(fmt.Sprintf(":%s", os.Getenv("PORT")), db, docker)
 
 	fmt.Println("Starting server...")
 
@@ -55,9 +64,4 @@ func main() {
 	}
 
 	log.Println("Goodbye...")
-
-	// dockerService := services.DockerServiceType{}
-
-	// dockerService.ProvisionDockerContainer(context.Background(), "ghcr.io/swarnimwalavalkar/expresstest:latest", "test", "3000")
-
 }

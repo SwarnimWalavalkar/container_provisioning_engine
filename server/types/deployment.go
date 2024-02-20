@@ -28,14 +28,19 @@ type DeploymentAttributes struct {
 	InternalPort int    `db:"internal_port" json:"-"`
 }
 
+type dockerAuth struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
 type CreateDeploymentRequest struct {
-	Subdomain string                 `json:"subdomain" binding:"required"`
-	ImageTag  string                 `json:"imageTag" binding:"required"`
-	EnvConfig map[string]interface{} `json:"envConfig" binding:"required"`
+	Subdomain  string             `json:"subdomain" binding:"required"`
+	ImageTag   string             `json:"imageTag" binding:"required"`
+	EnvConfig  map[string]string `json:"envConfig"`
+	DockerAuth *dockerAuth        `json:"dockerAuth"`
 }
 
 type UpdateDeploymentRequest struct {
-	Subdomain string                 `json:"subdomain"`
-	ImageTag  string                 `json:"imageTag"`
-	EnvConfig map[string]interface{} `json:"envConfig"`
+	Subdomain string   `json:"subdomain"`
+	ImageTag  string   `json:"imageTag"`
+	EnvConfig []string `json:"envConfig"`
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/SwarnimWalavalkar/aether/api/handlers"
 	"github.com/SwarnimWalavalkar/aether/database"
 	"github.com/SwarnimWalavalkar/aether/middlewares"
+	"github.com/SwarnimWalavalkar/aether/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,9 +17,10 @@ type Server struct {
 	gin    *gin.Engine
 	server *http.Server
 	db     *database.Database
+	docker *services.DockerService
 }
 
-func NewServer(port string, db *database.Database) *Server {
+func NewServer(port string, db *database.Database, docker *services.DockerService) *Server {
 	ginRouter := gin.New()
 
 	ginRouter.Use(gin.Logger())
@@ -34,6 +36,7 @@ func NewServer(port string, db *database.Database) *Server {
 		gin:    ginRouter,
 		server: server,
 		db:     db,
+		docker: docker,
 	}
 }
 
@@ -53,11 +56,11 @@ func (s *Server) Start() error {
 		deployments.Use(middlewares.AuthRequired)
 		{
 			deployments.GET("/", middlewares.AuthRequired, handlers.GetAllDeploymentsForUser(s.db))
-			deployments.POST("/", middlewares.AuthRequired, handlers.CreateDeployment(s.db))
+			deployments.POST("/", middlewares.AuthRequired, handlers.CreateDeployment(s.db, s.docker))
 			deployments.POST("/:uuid", middlewares.AuthRequired, handlers.UpdateDeployment(s.db))
 
 			deployments.GET("/:uuid", middlewares.AuthRequired, handlers.GetDeployment(s.db))
-			deployments.DELETE("/:uuid", middlewares.AuthRequired, handlers.DeleteDeployment(s.db))
+			deployments.DELETE("/:uuid", middlewares.AuthRequired, handlers.DeleteDeployment(s.db, s.docker))
 		}
 	}
 
