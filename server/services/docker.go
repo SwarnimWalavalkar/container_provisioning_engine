@@ -68,7 +68,7 @@ func (d *DockerService) ProvisionContainer(ctx context.Context, image string, se
 			Image:    image,
 			Labels:   traefikLabels,
 			Hostname: serviceHostname,
-			Env: envConfig,
+			Env:      envConfig,
 		},
 		&container.HostConfig{}, &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{NETWORK_NAME: {NetworkID: NETWORK_NAME}}}, nil, serviceName)
 	if err != nil {
@@ -82,4 +82,19 @@ func (d *DockerService) ProvisionContainer(ctx context.Context, image string, se
 	fmt.Printf("Service running on: https://%s\n", serviceHostname)
 
 	return cont.ID, nil
+}
+
+func (d *DockerService) RemoveContainer(ctx context.Context, containerID string) error {
+	if err := d.client.ContainerStop(ctx, containerID, container.StopOptions{}); err != nil {
+		return err
+	}
+
+	if err := d.client.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{
+		RemoveVolumes: true,
+		Force:         true,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }

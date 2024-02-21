@@ -48,7 +48,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - 5432:5432
+      - $DB_PORT:5432
     networks:
       - traefik_default
     healthcheck:
@@ -67,7 +67,7 @@ services:
     image: migrate/migrate
     volumes:
       - ../migrations:/migrations
-    command: "-path=/migrations/ -database postgresql://$DB_USER:$DB_PASSWORD@postgres:$DB_PORT/$DB_NAME?sslmode=disable up"
+    command: "-path=/migrations/ -database postgresql://$DB_USER:$DB_PASSWORD@postgres/$DB_NAME?sslmode=disable up"
     restart: on-failure
 
 networks:

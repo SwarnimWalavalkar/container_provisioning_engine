@@ -225,6 +225,12 @@ func DeleteDeployment(db *database.Database, docker *services.DockerService) gin
 			return
 		}
 
+		if err := docker.RemoveContainer(c, *existingDeployment.ContainerId); err != nil {
+			c.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		if err := db.DeleteDeployment(c.Request.Context(), uuid); err != nil {
 			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
