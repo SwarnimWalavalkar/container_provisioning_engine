@@ -36,14 +36,14 @@ func (d *Database) CreateDeployment(ctx context.Context, deploymentAttributes ty
 	}
 
 	deployment := types.Deployment{
-		UserId:       user.ID,
-		Subdomain:    &deploymentAttributes.Subdomain,
-		ImageTag:     &deploymentAttributes.ImageTag,
-		ContainerId:  &deploymentAttributes.ContainerId,
-		InternalPort: &deploymentAttributes.InternalPort,
+		UserId:      user.ID,
+		Subdomain:   &deploymentAttributes.Subdomain,
+		ImageTag:    &deploymentAttributes.ImageTag,
+		ContainerId: &deploymentAttributes.ContainerId,
+		Port:        &deploymentAttributes.Port,
 	}
 
-	if _, err := d.Client.NamedExecContext(ctx, `INSERT INTO deployments (user_id, sub_domain, image_tag, container_id, internal_port) VALUES (:user_id, :sub_domain, :image_tag, :container_id, :internal_port)`, deployment); err != nil {
+	if _, err := d.Client.NamedExecContext(ctx, `INSERT INTO deployments (user_id, sub_domain, image_tag, container_id, port) VALUES (:user_id, :sub_domain, :image_tag, :container_id, :port)`, deployment); err != nil {
 		return types.Deployment{}, err
 	}
 

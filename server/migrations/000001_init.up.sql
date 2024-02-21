@@ -8,7 +8,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE TABLE IF NOT EXISTS public.users
 (
-  id serial NOT NULL PRIMARY KEY,
+  id bigserial NOT NULL PRIMARY KEY,
 
   uuid text DEFAULT REPLACE(gen_random_uuid()::text, '-', '' ),
   name text NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.deployments (
   image_tag TEXT NOT NULL,
   container_id TEXT UNIQUE NOT NULL,
 
-  internal_port INTEGER UNIQUE NOT NULL,
+  port INTEGER UNIQUE NOT NULL,
   
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL

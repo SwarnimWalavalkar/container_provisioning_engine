@@ -10,8 +10,8 @@ type Deployment struct {
 	ImageTag  *string `db:"image_tag" json:"imageTag"`
 	Subdomain *string `db:"sub_domain" json:"subDomain"`
 
-	ContainerId  *string `db:"container_id" json:"containerId"`
-	InternalPort *int    `db:"internal_port" json:"-"`
+	ContainerId *string `db:"container_id" json:"containerId"`
+	Port        *int    `db:"port" json:"-"`
 
 	CreatedAt *time.Time `db:"created_at" json:"-"`
 	UpdatedAt *time.Time `db:"updated_at" json:"-"`
@@ -24,8 +24,8 @@ type DeploymentAttributes struct {
 	Subdomain string `json:"subdomain" db:"sub_domain"`
 	ImageTag  string `json:"imageTag" db:"image_tag"`
 
-	ContainerId  string `json:"containerId" db:"container_id"`
-	InternalPort int    `db:"internal_port" json:"-"`
+	ContainerId string `json:"containerId" db:"container_id"`
+	Port        int    `db:"port" json:"-"`
 }
 
 type dockerAuth struct {
@@ -33,10 +33,10 @@ type dockerAuth struct {
 	Password string `json:"password" binding:"required"`
 }
 type CreateDeploymentRequest struct {
-	Subdomain  string             `json:"subdomain" binding:"required"`
-	ImageTag   string             `json:"imageTag" binding:"required"`
+	Subdomain  string            `json:"subdomain" binding:"required"`
+	ImageTag   string            `json:"imageTag" binding:"required"`
 	EnvConfig  map[string]string `json:"envConfig"`
-	DockerAuth *dockerAuth        `json:"dockerAuth"`
+	DockerAuth *dockerAuth       `json:"dockerAuth"`
 }
 
 type UpdateDeploymentRequest struct {
