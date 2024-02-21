@@ -27,9 +27,9 @@ func GetDeployment(db *database.Database) gin.HandlerFunc {
 			c.Error(err)
 			switch {
 			case err == sql.ErrNoRows:
-				c.JSON(http.StatusNotFound, map[string]any{"error": fmt.Sprintf("Invalid UUID: %s", uuid)})
+				c.JSON(http.StatusNotFound, map[string]interface{}{"error": fmt.Sprintf("Invalid UUID: %s", uuid)})
 			default:
-				c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
+				c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": "Something went wrong"})
 			}
 			return
 		}
@@ -53,7 +53,7 @@ func GetAllDeploymentsForUser(db *database.Database) gin.HandlerFunc {
 			case err == sql.ErrNoRows:
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			default:
-				c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
+				c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": "Something went wrong"})
 			}
 			return
 		}
@@ -61,7 +61,7 @@ func GetAllDeploymentsForUser(db *database.Database) gin.HandlerFunc {
 		deployments, err := db.GetAllDeploymentsForUser(c.Request.Context(), userUUID.(string))
 		if err != nil {
 			c.Error(err)
-			c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
+			c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": "Something went wrong"})
 			return
 		}
 

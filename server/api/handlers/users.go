@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/SwarnimWalavalkar/aether/config"
 	"github.com/SwarnimWalavalkar/aether/database"
 	"github.com/SwarnimWalavalkar/aether/types"
 	"github.com/gin-gonic/gin"
@@ -23,9 +24,9 @@ func GetUser(db *database.Database) gin.HandlerFunc {
 			c.Error(err)
 			switch {
 			case err == sql.ErrNoRows:
-				c.JSON(http.StatusBadRequest, map[string]any{"error": fmt.Sprintf("Invalid UUID: %s", uuid)})
+				c.JSON(http.StatusBadRequest, map[string]interface{}{"error": fmt.Sprintf("Invalid UUID: %s", uuid)})
 			default:
-				c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
+				c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": "Something went wrong"})
 			}
 			return
 		}
@@ -73,14 +74,14 @@ func GetAuthToken(db *database.Database) gin.HandlerFunc {
 			c.Error(err)
 			switch {
 			case err == sql.ErrNoRows:
-				c.JSON(http.StatusBadRequest, map[string]any{"error": fmt.Sprintf("Invalid API Key: %s", authTokenReq.ApiKey)})
+				c.JSON(http.StatusBadRequest, map[string]interface{}{"error": fmt.Sprintf("Invalid API Key: %s", authTokenReq.ApiKey)})
 			default:
-				c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
+				c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": "Something went wrong"})
 			}
 			return
 		}
 
-		expiry := time.Now().Add(time.Hour * 48).Unix()
+		expiry := time.Now().Add(config.JWT_EXPIRY_DURATION_HOURS).Unix()
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"userUUID": apiKeyUser.UUID,
@@ -95,7 +96,7 @@ func GetAuthToken(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		c.SetCookie("Authorization", tokenString, int((24*time.Hour.Seconds())*30), "/", os.Getenv("DOMAIN"), false, true)
+		c.SetCookie("Authorization", tokenString, int((24*time.Hour.Seconds())*config.JWT_COOKIE_EXPIRY_DURATION_DAYS), "/", os.Getenv("DOMAIN"), false, true)
 
 		c.Status(http.StatusOK)
 

@@ -15,7 +15,7 @@ func AuthRequired(c *gin.Context) {
 		c.Error(err)
 		switch {
 		case err == http.ErrNoCookie:
-			c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]any{"error": "Authorization cookie missing"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]interface{}{"error": "Authorization cookie missing"})
 		default:
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		}
