@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/SwarnimWalavalkar/aether/config"
 	"github.com/docker/docker/api/types"
@@ -97,4 +98,22 @@ func (d *DockerService) RemoveContainer(ctx context.Context, containerID string)
 	}
 
 	return nil
+}
+
+func (d *DockerService) GetContainerEnv(ctx context.Context, containerId string) (map[string]string, error) {
+	resp, err := d.client.ContainerInspect(ctx, containerId)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	// Convert environment variables to a map
+	envMap := make(map[string]string)
+	for _, env := range resp.Config.Env {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+
+	return envMap, nil
 }

@@ -57,7 +57,7 @@ func (s *Server) Start() error {
 		{
 			deployments.GET("/", middlewares.AuthRequired, handlers.GetAllDeploymentsForUser(s.db))
 			deployments.POST("/", middlewares.AuthRequired, handlers.CreateDeployment(s.db, s.docker))
-			deployments.POST("/:uuid", middlewares.AuthRequired, handlers.UpdateDeployment(s.db))
+			deployments.POST("/:uuid", middlewares.AuthRequired, handlers.UpdateDeployment(s.db, s.docker))
 
 			deployments.GET("/:uuid", middlewares.AuthRequired, handlers.GetDeployment(s.db))
 			deployments.DELETE("/:uuid", middlewares.AuthRequired, handlers.DeleteDeployment(s.db, s.docker))

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 
@@ -132,7 +131,6 @@ func CreateDeployment(db *database.Database, docker *services.DockerService) gin
 		}
 
 		containerId, err := docker.ProvisionContainer(c, deploymentReq.ImageTag, deploymentReq.Subdomain, envArray, containerPort, authString)
-
 		if err != nil {
 			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -150,7 +148,7 @@ func CreateDeployment(db *database.Database, docker *services.DockerService) gin
 	}
 }
 
-func UpdateDeployment(db *database.Database) gin.HandlerFunc {
+func UpdateDeployment(db *database.Database, docker *services.DockerService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uuid := c.Param("uuid")
 		var updateDeploymentReq types.UpdateDeploymentRequest
@@ -185,7 +183,77 @@ func UpdateDeployment(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		deployment, err := db.UpdateDeployment(c.Request.Context(), types.DeploymentAttributes{UUID: uuid, Subdomain: updateDeploymentReq.Subdomain, ImageTag: updateDeploymentReq.ImageTag, ContainerId: fmt.Sprintf("%x", rand.Uint64())})
+		existingContainerEnv, err := docker.GetContainerEnv(c, *existingDeployment.ContainerId)
+		if err != nil {
+			c.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		var envMap map[string]string = existingContainerEnv
+		var imageTag string = *existingDeployment.ImageTag
+		var subdomain string = *existingDeployment.Subdomain
+		var containerPort int = *existingDeployment.Port
+
+		if len(*updateDeploymentReq.EnvConfig) != 0 {
+			envMap = utils.MergeMaps(existingContainerEnv, *updateDeploymentReq.EnvConfig)
+
+			providedPortStr, exists := (*updateDeploymentReq.EnvConfig)["PORT"]
+			if exists {
+				providedPort, err := strconv.Atoi(providedPortStr)
+				if err != nil {
+					c.Error(err)
+					c.JSON(http.StatusBadRequest, gin.H{"error": "The value of port must be a valid port number"})
+					return
+				}
+				containerPort = providedPort
+			}
+		}
+
+		var envArray []string
+		for key, value := range envMap {
+			envArray = append(envArray, fmt.Sprintf("%s=%s", key, value))
+		}
+
+		if updateDeploymentReq.ImageTag != nil {
+			imageTag = *updateDeploymentReq.ImageTag
+		}
+
+		if updateDeploymentReq.Subdomain != nil && *updateDeploymentReq.Subdomain != *existingDeployment.Subdomain {
+			if _, err := db.GetDeployment(c.Request.Context(), *updateDeploymentReq.Subdomain); err == nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Subdomain already exists"})
+				return
+			} else {
+				subdomain = *updateDeploymentReq.Subdomain
+			}
+		}
+
+		authString := ""
+		if updateDeploymentReq.DockerAuth != nil {
+			authConfig := registry.AuthConfig{Username: updateDeploymentReq.DockerAuth.Username, Password: updateDeploymentReq.DockerAuth.Password}
+
+			encodedJSON, err := json.Marshal(authConfig)
+			if err != nil {
+				panic(err)
+			}
+
+			authString = base64.URLEncoding.EncodeToString(encodedJSON)
+		}
+
+		if err := docker.RemoveContainer(c, *existingDeployment.ContainerId); err != nil {
+			c.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		containerId, err := docker.ProvisionContainer(c, imageTag, subdomain, envArray, containerPort, authString)
+		if err != nil {
+			c.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		deployment, err := db.UpdateDeployment(c.Request.Context(), types.DeploymentAttributes{UUID: uuid, Subdomain: subdomain, ImageTag: imageTag, ContainerId: containerId, Port: containerPort})
 		if err != nil {
 			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

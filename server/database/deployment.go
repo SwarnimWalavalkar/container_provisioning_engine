@@ -56,7 +56,7 @@ func (d *Database) CreateDeployment(ctx context.Context, deploymentAttributes ty
 }
 
 func (d *Database) UpdateDeployment(ctx context.Context, deploymentAttributes types.DeploymentAttributes) (types.Deployment, error) {
-	if _, err := d.Client.NamedExecContext(ctx, `UPDATE deployments SET image_tag = :image_tag, sub_domain = :sub_domain, container_id = :container_id WHERE uuid = :uuid`, deploymentAttributes); err != nil {
+	if _, err := d.Client.NamedExecContext(ctx, `UPDATE deployments SET image_tag = :image_tag, sub_domain = :sub_domain, port = :port, container_id = :container_id WHERE uuid = :uuid`, deploymentAttributes); err != nil {
 		return types.Deployment{}, err
 	}
 
