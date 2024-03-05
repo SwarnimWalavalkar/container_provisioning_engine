@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	"github.com/SwarnimWalavalkar/aether/types"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/types"
 )
 
 func (d *Database) GetDeployment(ctx context.Context, uuidOrSubdomain string) (types.Deployment, error) {

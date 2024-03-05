@@ -1,6 +1,6 @@
 version: "3"
 
-name: aether
+name: container_provisioning_engine
 
 services:
   reverse-proxy:
@@ -17,7 +17,7 @@ services:
       - "--entrypoints.websecure.address=:443"
       # - "--certificatesresolvers.tlsresolver.acme.tlschallenge=true"
       - "--certificatesresolvers.tlsresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
-      - "--certificatesresolvers.tlsresolver.acme.email=swarnim.walavalkar@gmail.com"
+      - "--certificatesresolvers.tlsresolver.acme.email=$LETSENCRYPT_EMAIL"
       - "--certificatesresolvers.tlsresolver.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80"
@@ -67,7 +67,7 @@ services:
     image: migrate/migrate
     volumes:
       - ../migrations:/migrations
-    command: "-path=/migrations/ -database postgresql://$DB_USER:$DB_PASSWORD@postgres/$DB_NAME?sslmode=disable up"
+    command: "-path=/migrations/ -database postgresql://$DB_USER:$DB_PASSWORD@postgres/$DB_NAME?sslmode=$SSL_MODE up"
     restart: on-failure
 
 networks:

@@ -1,4 +1,4 @@
-module github.com/SwarnimWalavalkar/aether
+module github.com/SwarnimWalavalkar/container_provisioning_engine
 
 go 1.20
 

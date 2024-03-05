@@ -1,7 +1,7 @@
+.DS_STORE
 .env
 **/.env
 
-server/letsencrypt
-node_modules/
-server/aether
+letsencrypt/
+container_provisioning_engine
 tmp/

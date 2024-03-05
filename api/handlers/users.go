@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/SwarnimWalavalkar/aether/config"
-	"github.com/SwarnimWalavalkar/aether/database"
-	"github.com/SwarnimWalavalkar/aether/types"
-	"github.com/SwarnimWalavalkar/aether/utils"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/config"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/database"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/types"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )

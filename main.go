@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SwarnimWalavalkar/aether/api"
-	"github.com/SwarnimWalavalkar/aether/database"
-	"github.com/SwarnimWalavalkar/aether/services"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/api"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/database"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/services"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 )

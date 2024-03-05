@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/SwarnimWalavalkar/aether/database"
-	"github.com/SwarnimWalavalkar/aether/services"
-	"github.com/SwarnimWalavalkar/aether/types"
-	"github.com/SwarnimWalavalkar/aether/utils"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/database"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/services"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/types"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/utils"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/gin-gonic/gin"
 )

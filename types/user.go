@@ -6,7 +6,7 @@ type User struct {
 	ID        *int       `db:"id" json:"-"`
 	UUID      *string    `db:"uuid" json:"uuid"`
 	Username  *string    `db:"username" json:"username"`
-	ApiKey    *string    `db:"api_key" json:"apiKey"`
+	ApiKey    *string    `db:"api_key" json:"-"`
 	CreatedAt *time.Time `db:"created_at" json:"-"`
 	UpdatedAt *time.Time `db:"updated_at" json:"-"`
 }

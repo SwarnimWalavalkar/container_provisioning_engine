@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/SwarnimWalavalkar/aether/api/handlers"
-	"github.com/SwarnimWalavalkar/aether/database"
-	"github.com/SwarnimWalavalkar/aether/middlewares"
-	"github.com/SwarnimWalavalkar/aether/services"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/api/handlers"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/database"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/middlewares"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/services"
 
 	"github.com/gin-gonic/gin"
 )

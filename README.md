@@ -1,3 +1,1 @@
-# Aether
-
-Container Provisioning Engine
+# Container Provisioning Engine
