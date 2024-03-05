@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.users
   id bigserial NOT NULL PRIMARY KEY,
 
   uuid text DEFAULT REPLACE(gen_random_uuid()::text, '-', '' ),
-  name text NOT NULL,
+  username text NOT NULL,
 
   api_key text NOT NULL,
 

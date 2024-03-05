@@ -39,7 +39,6 @@ func AuthRequired(c *gin.Context) {
 	}
 
 	c.Set("userUUID", claims["userUUID"])
-	c.Set("userAPIKey", claims["apiKey"])
 
 	c.Next()
 }

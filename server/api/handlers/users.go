@@ -10,6 +10,7 @@ import (
 	"github.com/SwarnimWalavalkar/aether/config"
 	"github.com/SwarnimWalavalkar/aether/database"
 	"github.com/SwarnimWalavalkar/aether/types"
+	"github.com/SwarnimWalavalkar/aether/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -43,11 +44,14 @@ func CreateUser(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		_, err := db.GetUserByAPIKey(c.Request.Context(), userReq.ApiKey)
-		if err == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "API Key already in use"})
+		apiKeyHash, err := utils.GenerateHash(userReq.ApiKey, nil)
+		if err != nil {
+			c.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+
+		userReq.ApiKey = apiKeyHash
 
 		user, err := db.CreateUser(c.Request.Context(), userReq)
 		if err != nil {
@@ -69,23 +73,34 @@ func GetAuthToken(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		apiKeyUser, err := db.GetUserByAPIKey(c.Request.Context(), authTokenReq.ApiKey)
+		user, err := db.GetUserByUsername(c.Request.Context(), authTokenReq.Username)
 		if err != nil {
 			c.Error(err)
 			switch {
 			case err == sql.ErrNoRows:
-				c.JSON(http.StatusBadRequest, map[string]interface{}{"error": fmt.Sprintf("Invalid API Key: %s", authTokenReq.ApiKey)})
+				c.JSON(http.StatusBadRequest, map[string]interface{}{"error": fmt.Sprintf("Invalid username: %s", authTokenReq.Username)})
 			default:
 				c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": "Something went wrong"})
 			}
 			return
 		}
 
+		apiKeyMatch, err := utils.MatchPasswordWithHash(authTokenReq.ApiKey, *user.ApiKey)
+		if err != nil {
+			c.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if !apiKeyMatch {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API Key"})
+			return
+		}
+
 		expiry := time.Now().Add(config.JWT_EXPIRY_DURATION_HOURS).Unix()
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"userUUID": apiKeyUser.UUID,
-			"apiKey":   apiKeyUser.ApiKey,
+			"userUUID": user.UUID,
 			"exp":      expiry,
 		})
 
