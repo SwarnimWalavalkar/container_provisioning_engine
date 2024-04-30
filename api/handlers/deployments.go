@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/SwarnimWalavalkar/container_provisioning_engine/database"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/queue"
 	"github.com/SwarnimWalavalkar/container_provisioning_engine/services"
 	"github.com/SwarnimWalavalkar/container_provisioning_engine/types"
 	"github.com/SwarnimWalavalkar/container_provisioning_engine/utils"
@@ -68,7 +70,7 @@ func GetAllDeploymentsForUser(db *database.Database) gin.HandlerFunc {
 	}
 }
 
-func CreateDeployment(db *database.Database, docker *services.DockerService) gin.HandlerFunc {
+func CreateDeployment(db *database.Database, docker *services.DockerService, taskDispatcher *queue.TaskDispatcher) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var deploymentReq types.CreateDeploymentRequest
 		if err := c.ShouldBindJSON(&deploymentReq); err != nil {
@@ -130,25 +132,20 @@ func CreateDeployment(db *database.Database, docker *services.DockerService) gin
 			authString = base64.URLEncoding.EncodeToString(encodedJSON)
 		}
 
-		containerId, err := docker.ProvisionContainer(c, deploymentReq.ImageTag, deploymentReq.Subdomain, envArray, containerPort, authString)
+		deployment, err := db.CreateDeployment(c.Request.Context(), types.DeploymentAttributes{UserUUID: userUUID.(string), Subdomain: deploymentReq.Subdomain, ImageTag: deploymentReq.ImageTag, ContainerId: nil, Status: "PENDING", Port: &containerPort})
 		if err != nil {
 			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		deployment, err := db.CreateDeployment(c.Request.Context(), types.DeploymentAttributes{UserUUID: userUUID.(string), Subdomain: deploymentReq.Subdomain, ImageTag: deploymentReq.ImageTag, ContainerId: containerId, Port: containerPort})
-		if err != nil {
-			c.Error(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+		taskDispatcher.Enqueue(queue.CreateDeploymentTask{Db: db, Docker: docker, DeploymentAttributes: &deployment, ImageTag: *deployment.ImageTag, Subdomain: *deployment.Subdomain, EnvArray: envArray, ContainerPort: containerPort, AuthString: authString})
 
-		c.JSON(http.StatusOK, deployment)
+		c.JSON(http.StatusOK, gin.H{"uuid": deployment.UUID, "status": deployment.Status})
 	}
 }
 
-func UpdateDeployment(db *database.Database, docker *services.DockerService) gin.HandlerFunc {
+func UpdateDeployment(db *database.Database, docker *services.DockerService, taskDispatcher *queue.TaskDispatcher) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uuid := c.Param("uuid")
 		var updateDeploymentReq types.UpdateDeploymentRequest
@@ -240,31 +237,13 @@ func UpdateDeployment(db *database.Database, docker *services.DockerService) gin
 			authString = base64.URLEncoding.EncodeToString(encodedJSON)
 		}
 
-		if err := docker.RemoveContainer(c, *existingDeployment.ContainerId); err != nil {
-			c.Error(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+		taskDispatcher.Enqueue(queue.UpdateDeploymentTask{Db: db, Docker: docker, DeploymentAttributes: &existingDeployment, ImageTag: imageTag, Subdomain: subdomain, EnvArray: envArray, ContainerPort: containerPort, AuthString: authString})
 
-		containerId, err := docker.ProvisionContainer(c, imageTag, subdomain, envArray, containerPort, authString)
-		if err != nil {
-			c.Error(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		deployment, err := db.UpdateDeployment(c.Request.Context(), types.DeploymentAttributes{UUID: uuid, Subdomain: subdomain, ImageTag: imageTag, ContainerId: containerId, Port: containerPort})
-		if err != nil {
-			c.Error(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusOK, deployment)
+		c.JSON(http.StatusOK, gin.H{"uuid": existingDeployment.UUID, "update_queued": true})
 	}
 }
 
-func DeleteDeployment(db *database.Database, docker *services.DockerService) gin.HandlerFunc {
+func DeleteDeployment(db *database.Database, docker *services.DockerService, taskDispatcher *queue.TaskDispatcher) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uuid := c.Param("uuid")
 
@@ -283,7 +262,6 @@ func DeleteDeployment(db *database.Database, docker *services.DockerService) gin
 
 		user, err := db.GetUserByUUID(c.Request.Context(), userUUID.(string))
 		if err != nil {
-			c.Error(err)
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
@@ -293,17 +271,18 @@ func DeleteDeployment(db *database.Database, docker *services.DockerService) gin
 			return
 		}
 
-		if err := docker.RemoveContainer(c, *existingDeployment.ContainerId); err != nil {
+		if *existingDeployment.Status == "DELETING" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Deployment is already being deleted"})
+			return
+		}
+
+		if _, err := db.UpdateDeployment(context.Background(), types.DeploymentAttributes{UUID: *existingDeployment.UUID, ImageTag: *existingDeployment.ImageTag, Subdomain: *existingDeployment.Subdomain, Port: existingDeployment.Port, ContainerId: existingDeployment.ContainerId, Status: "DELETING"}); err != nil {
 			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := db.DeleteDeployment(c.Request.Context(), uuid); err != nil {
-			c.Error(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+		taskDispatcher.Enqueue(queue.DeleteDeploymentTask{Db: db, Docker: docker, DeploymentAttributes: &existingDeployment})
 
 		c.Status(http.StatusOK)
 	}

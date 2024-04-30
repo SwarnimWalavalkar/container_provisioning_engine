@@ -13,6 +13,8 @@ type Deployment struct {
 	ContainerId *string `db:"container_id" json:"containerId"`
 	Port        *int    `db:"port" json:"-"`
 
+	Status *string `db:"status" json:"status"`
+
 	CreatedAt *time.Time `db:"created_at" json:"-"`
 	UpdatedAt *time.Time `db:"updated_at" json:"-"`
 }
@@ -24,8 +26,10 @@ type DeploymentAttributes struct {
 	Subdomain string `json:"subdomain" db:"sub_domain"`
 	ImageTag  string `json:"imageTag" db:"image_tag"`
 
-	ContainerId string `db:"container_id" json:"containerId"`
-	Port        int    `db:"port" json:"-"`
+	ContainerId *string `db:"container_id" json:"containerId"`
+	Port        *int    `db:"port" json:"-"`
+
+	Status string `db:"status" json:"status"`
 }
 
 type dockerAuth struct {

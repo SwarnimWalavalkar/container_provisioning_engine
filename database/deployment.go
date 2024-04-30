@@ -39,11 +39,12 @@ func (d *Database) CreateDeployment(ctx context.Context, deploymentAttributes ty
 		UserId:      user.ID,
 		Subdomain:   &deploymentAttributes.Subdomain,
 		ImageTag:    &deploymentAttributes.ImageTag,
-		ContainerId: &deploymentAttributes.ContainerId,
-		Port:        &deploymentAttributes.Port,
+		ContainerId: deploymentAttributes.ContainerId,
+		Port:        deploymentAttributes.Port,
+		Status:      &deploymentAttributes.Status,
 	}
 
-	if _, err := d.Client.NamedExecContext(ctx, `INSERT INTO deployments (user_id, sub_domain, image_tag, container_id, port) VALUES (:user_id, :sub_domain, :image_tag, :container_id, :port)`, deployment); err != nil {
+	if _, err := d.Client.NamedExecContext(ctx, `INSERT INTO deployments (user_id, sub_domain, image_tag, container_id, status, port) VALUES (:user_id, :sub_domain, :image_tag, :container_id, :status, :port)`, deployment); err != nil {
 		return types.Deployment{}, err
 	}
 
@@ -56,7 +57,7 @@ func (d *Database) CreateDeployment(ctx context.Context, deploymentAttributes ty
 }
 
 func (d *Database) UpdateDeployment(ctx context.Context, deploymentAttributes types.DeploymentAttributes) (types.Deployment, error) {
-	if _, err := d.Client.NamedExecContext(ctx, `UPDATE deployments SET image_tag = :image_tag, sub_domain = :sub_domain, port = :port, container_id = :container_id WHERE uuid = :uuid`, deploymentAttributes); err != nil {
+	if _, err := d.Client.NamedExecContext(ctx, `UPDATE deployments SET image_tag = :image_tag, sub_domain = :sub_domain, port = :port, container_id = :container_id, status = :status WHERE uuid = :uuid`, deploymentAttributes); err != nil {
 		return types.Deployment{}, err
 	}
 

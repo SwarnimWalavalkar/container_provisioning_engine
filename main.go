@@ -12,6 +12,7 @@ import (
 
 	"github.com/SwarnimWalavalkar/container_provisioning_engine/api"
 	"github.com/SwarnimWalavalkar/container_provisioning_engine/database"
+	"github.com/SwarnimWalavalkar/container_provisioning_engine/queue"
 	"github.com/SwarnimWalavalkar/container_provisioning_engine/services"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
@@ -19,31 +20,36 @@ import (
 
 func main() {
 
-	fmt.Println("Connecting to database...")
+	log.Println("Connecting to database...")
 
 	db, err := database.NewDatabase()
 	if err != nil {
-		fmt.Println("Error connecting to the database", err)
+		log.Println("Error connecting to the database", err)
 	}
 
 	if err := db.Ping(context.Background()); err != nil {
 		log.Fatal("Error pinging database", err)
 	}
 
-	fmt.Println("successfully connected to database")
+	log.Println("successfully connected to database")
 
 	docker, err := services.NewDockerService()
 	if err != nil {
-		fmt.Println("Error connecting to Docker", err)
+		log.Println("Error connecting to Docker", err)
 	}
 
 	if err := docker.Ping(context.Background()); err != nil {
 		log.Fatal("Error pinging Docker", err)
 	}
 
-	server := api.NewServer(fmt.Sprintf(":%s", os.Getenv("PORT")), db, docker)
+	taskDispatcher := queue.NewTaskDispatcher(queue.Options{MaxWorkers: 10, MaxQueueSize: 100})
+	taskDispatcherCTX, taskDispatcherCTXCancel := context.WithCancel(context.Background())
 
-	fmt.Println("Starting server...")
+	go taskDispatcher.Start(taskDispatcherCTX)
+
+	server := api.NewServer(fmt.Sprintf(":%s", os.Getenv("PORT")), db, docker, taskDispatcher)
+
+	log.Println("Starting server...")
 
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {
@@ -55,7 +61,14 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
+	log.Println()
+	log.Println("==============================")
+
 	log.Println("Shutting down server...")
+
+	log.Println("==============================")
+
+	taskDispatcherCTXCancel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -63,5 +76,6 @@ func main() {
 		log.Fatal("Server forced to shutdown: ", err)
 	}
 
+	log.Println()
 	log.Println("Goodbye...")
 }
